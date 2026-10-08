@@ -53,7 +53,7 @@ if __name__ == '__main__':
     parser.add_argument('--plm_name', type=str, default='t5-base')
     parser.add_argument('--tokenizer_plm', type=str, default='sentence-t5-base')
     parser.add_argument('--dataset', type=str, default='Games')
-    parser.add_argument('--token_type', type=str, default='pretrained_nc', choices=['sid', 'pretrained', 'cid', 'sid_nc'])
+    parser.add_argument('--token_type', type=str, default='pretrained_nc', choices=['sid', 'pretrained', 'cid', 'sid_nc', 'pretrained_nc'])
 
     # other hyper-param
     parser.add_argument('--K', type=int, default=256, help='codebook size')
@@ -78,7 +78,7 @@ if __name__ == '__main__':
 
     # setting output dir
     output_dir = os.path.join(args.output_dir, args.token_type)
-    if args.token_type == 'sid':
+    if args.token_type in ('sid', 'sid_nc'):
         dataset_name = args.dataset + '_' + args.tokenizer_plm
     else:
         dataset_name = args.dataset

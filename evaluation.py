@@ -1,14 +1,12 @@
 import argparse
 import logging
-from collections import defaultdict
 
 import torch
 import os
-import math
 
 import json
 
-from utils import set_seed, RecDataset, RecCollator, ensure_dir, get_local_time, Trie, prefix_allowed_tokens_fn, \
+from utils import set_seed, RecDataset, RecCollator, ensure_dir, Trie, prefix_allowed_tokens_fn, \
     setup_logging
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from torch.utils.data import DataLoader
@@ -17,74 +15,7 @@ from tqdm import tqdm
 os.environ["TOKENIZERS_PARALLELISM"] = 'false'
 
 
-# metric function
-def ndcg_at_k(_rec_list, k):
-    ndcg = 0.0
-
-    for one_rec in _rec_list:
-        topk_rec = one_rec[:k]
-        for i in range(len(topk_rec)):
-            ndcg += topk_rec[i] / math.log(i + 2, 2)
-
-    return ndcg
-
-
-def hit_at_k(_rec_list, k):
-    hit = 0.0
-
-    for one_rec in _rec_list:
-        topk_rec = one_rec[:k]
-        if sum(topk_rec) > 0:
-            hit += 1
-
-    return hit
-
-
-# get metrics result
-def get_metrics(metrics, _rec_list):
-    _metrics_dict = dict()
-
-    metrics = eval(metrics)
-
-    for metric in metrics:
-        metric_type, k = metric.split('@')
-        k = int(k)
-        if metric_type == 'ndcg':
-            _metrics_dict[metric] = ndcg_at_k(_rec_list, k)
-        elif metric_type == 'hit':
-            _metrics_dict[metric] = hit_at_k(_rec_list, k)
-
-    return _metrics_dict
-
-
-# for each sequence, generate "num_beams" candidate item
-def get_rec_list(_predictions, _scores, _targets, num_beams, _all_items):
-    _rec_list = []
-    batch_size = len(_targets)
-
-    # for items that don't actually exist, set their scores to -inf
-    for idx, indices in enumerate(_all_items):
-        if indices not in _all_items:
-            scores[idx] = float('-inf')
-
-    for b in range(batch_size):
-        batch_predictions = _predictions[b * num_beams:(b + 1) * num_beams]
-        batch_scores = _scores[b * num_beams:(b + 1) * num_beams]
-        target = targets[b]
-
-        pairs = [(a, b) for a, b in zip(batch_predictions, batch_scores)]
-        sorted_pairs = sorted(pairs, key=lambda x: x[1], reverse=True)
-
-        one_rec = []
-        for one_res in sorted_pairs:
-            if one_res[0] == target:
-                one_rec.append(1)
-            else:
-                one_rec.append(0)
-
-        _rec_list.append(one_rec)
-
-    return _rec_list
+from experiment import CollisionEvaluator, rank_candidates, normalize_sid, parse_metrics
 
 
 if __name__ == '__main__':
@@ -93,7 +24,7 @@ if __name__ == '__main__':
     # ckpt & dataset
     parser.add_argument('--ckpt_dir', type=str, default='./checkpoints')
     parser.add_argument('--dataset', type=str, default='Games')
-    parser.add_argument('--device', type=str, default='cuda:5' if torch.cuda.is_available() else 'cpu')
+    parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--plm_dir', type=str, default='../LLM/')
     parser.add_argument('--plm_name', type=str, default='t5-base')
     parser.add_argument('--tokenizer_plm', type=str, default='sentence-t5-base')
@@ -114,7 +45,11 @@ if __name__ == '__main__':
     # metrics
     parser.add_argument('--metrics', type=str, default="['hit@5', 'hit@10', 'ndcg@5', 'ndcg@10']")
 
+    parser.add_argument('--results_file', type=str, default=None, help='Save JSON experiment results')
     args = parser.parse_args()
+    parse_metrics(args.metrics)
+    if args.num_beams < 1:
+        parser.error('--num_beams must be positive')
 
     set_seed()
     setup_logging()
@@ -125,7 +60,7 @@ if __name__ == '__main__':
 
     # load checkpoint
     ckpt_dir = os.path.join(args.ckpt_dir, args.token_type)
-    if args.token_type == 'sid':
+    if args.token_type in ('sid', 'sid_nc'):
         dataset_name = args.dataset + '_' + args.tokenizer_plm
     else:
         dataset_name = args.dataset
@@ -144,9 +79,18 @@ if __name__ == '__main__':
 
     all_items = test_dataset.get_all_items()
 
+    evaluator = CollisionEvaluator(test_dataset.indices, args.D, args.token_type, args.metrics)
+    if not len(test_dataset):
+        raise ValueError('Test dataset is empty')
+    if max(int(m.split('@')[1]) for m in evaluator.metrics) > args.num_beams:
+        logging.warning('Some metric cutoffs exceed the beam count; ranks beyond beams are unavailable')
+    candidate_ids = [tokenizer.encode(candidate) for candidate in sorted(all_items)]
+    for code, ids in zip(sorted(all_items), candidate_ids):
+        if normalize_sid(tokenizer.decode(ids, skip_special_tokens=True)) != code:
+            raise ValueError('Checkpoint tokenizer does not represent this SID mapping: ' + code)
     candidate_trie = Trie(
         [
-            [0] + tokenizer.encode(candidate) for candidate in all_items
+            [model.config.decoder_start_token_id] + ids for ids in candidate_ids
         ]
     )
     prefix_allowed_tokens_fn = prefix_allowed_tokens_fn(candidate_trie)
@@ -155,8 +99,6 @@ if __name__ == '__main__':
     test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, collate_fn=collator, pin_memory=True,
                                  num_workers=4)
 
-    metrics_dict = defaultdict(float)
-    total = len(test_dataset)
 
     with torch.no_grad():
         # for batch in tqdm(test_dataloader, desc='[Testing]', disable=True):
@@ -168,7 +110,7 @@ if __name__ == '__main__':
             output = model.generate(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
-                max_new_tokens=10,
+                max_new_tokens=max(len(ids) for ids in candidate_ids),
                 num_beams=args.num_beams,
                 num_return_sequences=args.num_beams,
                 prefix_allowed_tokens_fn=prefix_allowed_tokens_fn,
@@ -186,12 +128,16 @@ if __name__ == '__main__':
             targets = tokenizer.batch_decode(targets, skip_special_tokens=True)
 
             scores = scores.detach().tolist()
-            rec_list = get_rec_list(predictions, scores, targets, args.num_beams, all_items)
-            batch_metrics_dict = get_metrics(args.metrics, rec_list)
+            for b, target in enumerate(targets):
+                lo, hi = b * args.num_beams, (b + 1) * args.num_beams
+                ranked = rank_candidates(predictions[lo:hi], scores[lo:hi], all_items)
+                evaluator.add(ranked, target)
 
-            for metric, value in batch_metrics_dict.items():
-                metrics_dict[metric] += value
-
-    logging.info('evaluation result:')
-    for metric, value in metrics_dict.items():
-        logging.info("  %s: %s", metric, value / total)
+    result = evaluator.result()
+    result['settings'] = vars(args)
+    result['checkpoint'] = ckpt_dir
+    logging.info('evaluation result:\n%s', json.dumps(result, indent=2, ensure_ascii=False))
+    if args.results_file:
+        ensure_dir(os.path.dirname(os.path.abspath(args.results_file)))
+        with open(args.results_file, 'w') as fp:
+            json.dump(result, fp, indent=2, ensure_ascii=False)

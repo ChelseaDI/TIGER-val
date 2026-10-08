@@ -1,3 +1,4 @@
+from experiment import build_catalog
 from torch.utils.data import Dataset
 import os
 import json
@@ -165,6 +166,9 @@ class RecDataset(Dataset):
         self.prefix_allowed_tokens = None
 
         self._load_data()
+        self.sid_catalog, self.sid_class_sizes, self.collision_stats = build_catalog(
+            self.indices, self.D, self.token_type)
+        logging.info("SID catalog: %s", self.collision_stats)
         self._id2token()
 
         if mode == 'train':
@@ -205,6 +209,8 @@ class RecDataset(Dataset):
     def _id2token(self):
         self.remapped_inter_data = dict()
         for user, seq in self.inter_data.items():
+            if len(seq) < 3:
+                raise ValueError("User {} needs at least three interactions".format(user))
             self.remapped_inter_data[user] = [''.join(self.indices[str(item)]) for item in seq]
 
     # using indices get all tokens
