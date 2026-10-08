@@ -1,4 +1,4 @@
-"""Encode Beauty titles/descriptions; tensor row i always represents item i."""
+"""Encode selected Beauty metadata; tensor row i always represents item i."""
 
 import argparse
 import html
@@ -9,16 +9,30 @@ from pathlib import Path
 
 DATA_DIR = Path(__file__).resolve().parent
 DEFAULT_PLM_DIR = DATA_DIR.parents[2] / 'LLM'
+TEXT_FIELDS = ('title', 'description', 'brand', 'categories')
 
 
 def clean_text(value):
-    if isinstance(value, list):
+    if isinstance(value, (list, tuple)):
         return ' '.join(filter(None, (clean_text(part) for part in value)))
+    if isinstance(value, dict):
+        return ' '.join(filter(None, (clean_text(part) for part in value.values())))
     if value is None:
         return ''
     text = html.unescape(str(value))
     text = re.sub(r'<[^>]+>', ' ', text)
     return ' '.join(text.split())
+
+
+def text_values(value):
+    """Flatten only strings, excluding numbers, identifiers and URLs in auto mode."""
+    if isinstance(value, dict):
+        return ' '.join(filter(None, (text_values(v) for v in value.values())))
+    if isinstance(value, (list, tuple)):
+        return ' '.join(filter(None, (text_values(v) for v in value)))
+    if isinstance(value, str) and not re.match(r'^https?://', value.strip()):
+        return clean_text(value)
+    return ''
 
 
 def get_item_text(item_path, features):
@@ -27,11 +41,29 @@ def get_item_text(item_path, features):
     expected_ids = {str(i) for i in range(len(items))}
     if not items or set(items) != expected_ids:
         raise ValueError('Item IDs must be consecutive strings from 0 to N-1')
+    available = set().union(*(item.keys() for item in items.values()))
+    auto = features == ['all_text']
+    if 'all_text' in features and not auto:
+        raise ValueError('Use all_text alone, or specify individual field names')
+    if auto:
+        # Stable semantic order, then any additional textual metadata fields.
+        excluded = {'asin', 'imUrl', 'image', 'imageURL', 'imageURLHighRes',
+                    'related', 'salesRank', 'price'}
+        features = [k for k in TEXT_FIELDS if k in available]
+        features += sorted(available - set(features) - excluded)
+    else:
+        unknown = set(features) - available
+        if unknown:
+            raise ValueError(f'Unknown metadata fields: {sorted(unknown)}; '
+                             f'available fields: {sorted(available)}. '
+                             'Rerun preprocess.py to preserve all metadata.')
+    print(f'Metadata fields: {features}; automatic text-only mode: {auto}')
     texts = []
     fallback_count = 0
     for item_id in range(len(items)):
         item = items[str(item_id)]
-        parts = [clean_text(item.get(feature)) for feature in features]
+        cleaner = text_values if auto else clean_text
+        parts = [cleaner(item.get(feature)) for feature in features]
         text = ' '.join(part.rstrip('.') + '.' for part in parts if part)
         if not text:
             text = f"Product {item.get('asin') or item_id}."
@@ -49,7 +81,9 @@ def main():
     parser.add_argument('--device', default=None, help='e.g. cuda:0 or cpu; auto-detect by default')
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--max_sent_len', type=int, default=512)
-    parser.add_argument('--features', nargs='+', default=['title', 'description'])
+    parser.add_argument('--features', nargs='+', default=['title', 'description'],
+                        help='Metadata fields in concatenation order, or all_text '
+                             'for all textual metadata excluding IDs, URLs and relations')
     parser.add_argument('--output_path', type=Path, default=None)
     args = parser.parse_args()
     if args.batch_size <= 0 or args.max_sent_len <= 0:

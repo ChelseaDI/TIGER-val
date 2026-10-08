@@ -62,11 +62,11 @@ def preprocess(reviews_path, metadata_path, output_dir, min_interactions=5):
     items = {}
     for asin, item_id in item2id.items():
         record = metadata.get(asin, {})
-        items[str(item_id)] = {
-            'asin': asin,
-            'title': record.get('title') or '',
-            'description': record.get('description') or '',
-        }
+        # Preserve every field (including nested values) for later text selection.
+        items[str(item_id)] = dict(record)
+        items[str(item_id)].update(asin=asin)
+        items[str(item_id)].setdefault('title', '')
+        items[str(item_id)].setdefault('description', '')
 
     lengths = [len(seq) for seq in inter_data.values()]
     stats = {
