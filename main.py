@@ -37,23 +37,24 @@ if __name__ == '__main__':
 
     # TrainerArguments
     parser.add_argument('--output_dir', type=str, default='./checkpoints')
-    parser.add_argument('--batch_size', type=int, default=128)
+    parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--precision', choices=['fp32', 'fp16', 'bf16'], default=None, help='Default: fp32')
     parser.add_argument('--bf16', type=parse_bool, default=None, help='Legacy option; false selects fp32')
     parser.add_argument('--epoch', type=int, default=200)
+    parser.add_argument('--max_steps', type=int, default=200000)
     parser.add_argument('--optimizer', type=str, default='adamw_torch')
     parser.add_argument('--lr', type=float, default=5e-4)
     parser.add_argument('--weight_decay', type=float, default=0.01)
     parser.add_argument('--lr_scheduler_type', type=str, default='cosine')
     parser.add_argument('--warmup_ratio', type=float, default=0.01)
-    parser.add_argument('--gradient_accumulation_steps', type=int, default=2)
+    parser.add_argument('--gradient_accumulation_steps', type=int, default=1)
 
     # dataset & model
     parser.add_argument('--plm_dir', type=str, default='../LLM/')
     parser.add_argument('--plm_name', type=str, default='t5-base')
     parser.add_argument('--tokenizer_plm', type=str, default='sentence-t5-base')
-    parser.add_argument('--dataset', type=str, default='Games')
-    parser.add_argument('--token_type', type=str, default='pretrained_nc', choices=['sid', 'pretrained', 'cid', 'sid_nc', 'pretrained_nc'])
+    parser.add_argument('--dataset', type=str, default='Beauty')
+    parser.add_argument('--token_type', type=str, default='sid_nc', choices=['sid', 'pretrained', 'cid', 'sid_nc', 'pretrained_nc'])
 
     # other hyper-param
     parser.add_argument('--K', type=int, default=256, help='codebook size')
@@ -128,6 +129,7 @@ if __name__ == '__main__':
                                              per_device_eval_batch_size=args.batch_size,
                                              gradient_accumulation_steps=args.gradient_accumulation_steps,
                                              num_train_epochs=args.epoch,
+                                             max_steps=args.max_steps,
                                              optim=args.optimizer,
                                              learning_rate=args.lr,
                                              weight_decay=args.weight_decay,

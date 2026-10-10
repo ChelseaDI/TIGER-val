@@ -46,7 +46,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--data_dir', type=str, default='../data/')
-    parser.add_argument('--dataset', type=str, default='Games')
+    parser.add_argument('--dataset', type=str, default='Beauty')
     parser.add_argument('--device', type=str, default='cuda:1' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--K', type=int, default=256)
     parser.add_argument('--D', type=int, default=3)
@@ -54,7 +54,7 @@ if __name__ == '__main__':
     parser.add_argument('--tokenizer_plm', type=str, default='sentence-t5-base')
     parser.add_argument('--ckpt_file', type=str, default='best_collision_model.pth')
     parser.add_argument('--num_workers', type=int, default=4)
-    parser.add_argument('--token_type', type=str, default='pretrained', choices=['sid', 'pretrained'])
+    parser.add_argument('--token_type', type=str, default='sid', choices=['sid', 'pretrained'])
 
     args = parser.parse_args()
 

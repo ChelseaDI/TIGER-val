@@ -23,12 +23,12 @@ if __name__ == '__main__':
 
     # ckpt & dataset
     parser.add_argument('--ckpt_dir', type=str, default='./checkpoints')
-    parser.add_argument('--dataset', type=str, default='Games')
+    parser.add_argument('--dataset', type=str, default='Beauty')
     parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--plm_dir', type=str, default='../LLM/')
     parser.add_argument('--plm_name', type=str, default='t5-base')
     parser.add_argument('--tokenizer_plm', type=str, default='sentence-t5-base')
-    parser.add_argument('--token_type', type=str, default='pretrained_nc', choices=['sid', 'cid', 'pretrained', 'sid_nc', 'pretrained_nc'])
+    parser.add_argument('--token_type', type=str, default='sid_nc', choices=['sid', 'cid', 'pretrained', 'sid_nc', 'pretrained_nc'])
 
     # hyper-param
     parser.add_argument('--num_beams', type=int, default=50)
@@ -43,7 +43,7 @@ if __name__ == '__main__':
     parser.add_argument('--user_prefix', type=str, default='<u_{}>', )
 
     # metrics
-    parser.add_argument('--metrics', type=str, default="['hit@5', 'hit@10', 'ndcg@5', 'ndcg@10']")
+    parser.add_argument('--metrics', type=str, default="['recall@5', 'recall@10', 'ndcg@5', 'ndcg@10']")
 
     parser.add_argument('--results_file', type=str, default=None, help='Save JSON experiment results')
     args = parser.parse_args()

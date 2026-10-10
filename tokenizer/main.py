@@ -17,15 +17,15 @@ if __name__ == '__main__':
     parser.add_argument('--num_workers', type=int, default=4)
     # parser.add_argument('--save_limit', type=int, default=5)
     parser.add_argument('--ckpt_dir', type=str, default='saved_model/')
-    parser.add_argument('--dataset', type=str, default='Games')
+    parser.add_argument('--dataset', type=str, default='Beauty')
     parser.add_argument('--tokenizer_plm', type=str, default='sentence-t5-base')
-    parser.add_argument('--token_type', type=str, default='pretrained', choices=['sid', 'pretrained'])
+    parser.add_argument('--token_type', type=str, default='sid', choices=['sid', 'pretrained'])
 
     # hyper-param
-    parser.add_argument('--lr', type=float, default=1e-3)
-    parser.add_argument('--epochs', type=int, default=5000)
-    parser.add_argument('--batch_size', type=int, default=512)
-    parser.add_argument('--optimizer', type=str, default='AdamW')
+    parser.add_argument('--lr', type=float, default=0.01)
+    parser.add_argument('--epochs', type=int, default=20000)
+    parser.add_argument('--batch_size', type=int, default=1024)
+    parser.add_argument('--optimizer', type=str, default='Adagrad')
     parser.add_argument('--eval_step', type=int, default=50, help='calculate collision rate')
     parser.add_argument('--weight_decay', type=float, default=0.0, help='l2 regularization')
     parser.add_argument('--dropout_prob', type=float, default=0.0, help='dropout ratio')
@@ -41,7 +41,7 @@ if __name__ == '__main__':
 
     # param for RQ-VAE
     # sid
-    parser.add_argument('--layers', nargs='+', type=int, default=[2048, 1024, 512, 256, 128, 64],
+    parser.add_argument('--layers', nargs='+', type=int, default=[512, 256, 128],
                         help='each hidden size in encoder')
     parser.add_argument('--num_emb_list', nargs='+', type=int, default=[256, 256, 256],
                         help='codebook num and codebook size')

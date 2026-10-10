@@ -6,13 +6,13 @@ import os
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', type=str, default='Games')
+    parser.add_argument('--dataset', type=str, default='Beauty')
     parser.add_argument('--tokenizer_plm', type=str, default='sentence-t5-base',
                         choices=['sentence-t5-base', 'bert-base-uncased'])
     parser.add_argument('--K', type=int, default=256)
     parser.add_argument('--D', type=int, default=3)
     # cid has not conflict
-    parser.add_argument('--token_type', type=str, default='pretrained', choices=['sid', 'pretrained'])
+    parser.add_argument('--token_type', type=str, default='sid', choices=['sid', 'pretrained'])
 
     args = parser.parse_args()
 

@@ -81,7 +81,7 @@ def main():
     parser.add_argument('--device', default=None, help='e.g. cuda:0 or cpu; auto-detect by default')
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--max_sent_len', type=int, default=512)
-    parser.add_argument('--features', nargs='+', default=['title', 'description'],
+    parser.add_argument('--features', nargs='+', default=['title', 'price', 'brand', 'categories'],
                         help='Metadata fields in concatenation order, or all_text '
                              'for all textual metadata excluding IDs, URLs and relations')
     parser.add_argument('--output_path', type=Path, default=None)
