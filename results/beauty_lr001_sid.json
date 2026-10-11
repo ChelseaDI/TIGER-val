@@ -1,0 +1,90 @@
+{
+  "catalog": {
+    "items": 12101,
+    "sid_classes": 11750,
+    "collision_classes": 289,
+    "items_in_collision_classes": 640,
+    "collision_rate": 0.029005867283695586,
+    "max_class_size": 5
+  },
+  "strata": {
+    "all": {
+      "samples": 22363,
+      "metrics": {
+        "sid_at_item_rank/recall@5": 0.04198899968698296,
+        "sid_at_item_rank/recall@10": 0.0639001922818942,
+        "sid_at_item_rank/ndcg@5": 0.02831400314265348,
+        "sid_at_item_rank/ndcg@10": 0.035334288982844096,
+        "sid_unique/recall@5": 0.04221258328489022,
+        "sid_unique/recall@10": 0.06488396011268613,
+        "sid_unique/ndcg@5": 0.028420390285566005,
+        "sid_unique/ndcg@10": 0.035677031567250404,
+        "item/recall@5": 0.04113938201493538,
+        "item/recall@10": 0.06264812413361356,
+        "item/ndcg@5": 0.02754402063788247,
+        "item/ndcg@10": 0.03442803739507766,
+        "sid_hit_item_miss/recall@5": 0.0008496176720475786,
+        "sid_hit_item_miss/recall@10": 0.0012520681482806422
+      }
+    },
+    "collision": {
+      "samples": 1163,
+      "metrics": {
+        "sid_at_item_rank/recall@5": 0.08426483233018056,
+        "sid_at_item_rank/recall@10": 0.13327601031814273,
+        "sid_at_item_rank/ndcg@5": 0.060227823149253595,
+        "sid_at_item_rank/ndcg@10": 0.07579530124737913,
+        "sid_unique/recall@5": 0.08512467755803955,
+        "sid_unique/recall@10": 0.13843508168529664,
+        "sid_unique/ndcg@5": 0.06065774576318309,
+        "sid_unique/ndcg@10": 0.07760401938311594,
+        "item/recall@5": 0.06792777300085985,
+        "item/recall@10": 0.10920034393809114,
+        "item/ndcg@5": 0.04542204606052252,
+        "item/ndcg@10": 0.058369244276424155,
+        "sid_hit_item_miss/recall@5": 0.01633705932932072,
+        "sid_hit_item_miss/recall@10": 0.02407566638005159
+      }
+    },
+    "singleton": {
+      "samples": 21200,
+      "metrics": {
+        "sid_at_item_rank/recall@5": 0.039669811320754714,
+        "sid_at_item_rank/recall@10": 0.06009433962264151,
+        "sid_at_item_rank/ndcg@5": 0.026563259148895273,
+        "sid_at_item_rank/ndcg@10": 0.033114658923237734,
+        "sid_unique/recall@5": 0.039858490566037734,
+        "sid_unique/recall@10": 0.060849056603773585,
+        "sid_unique/ndcg@5": 0.026651897624223236,
+        "sid_unique/ndcg@10": 0.033376980301691346,
+        "item/recall@5": 0.039669811320754714,
+        "item/recall@10": 0.06009433962264151,
+        "item/ndcg@5": 0.026563259148895273,
+        "item/ndcg@10": 0.033114658923237734,
+        "sid_hit_item_miss/recall@5": 0.0,
+        "sid_hit_item_miss/recall@10": 0.0
+      }
+    }
+  },
+  "settings": {
+    "ckpt_dir": "checkpoints_beauty_lr001_sid",
+    "dataset": "Beauty",
+    "device": "cuda:0",
+    "plm_dir": "../LLM/",
+    "plm_name": "t5-base",
+    "tokenizer_plm": "sentence-t5-base",
+    "token_type": "sid_nc",
+    "num_beams": 50,
+    "batch_size": 16,
+    "K": 256,
+    "D": 3,
+    "item_sep": ",",
+    "max_len": 20,
+    "max_sent_len": 512,
+    "add_user_prefix": false,
+    "user_prefix": "<u_{}>",
+    "metrics": "['recall@5', 'recall@10', 'ndcg@5', 'ndcg@10']",
+    "results_file": "results/beauty_lr001_sid.json"
+  },
+  "checkpoint": "checkpoints_beauty_lr001_sid/sid_nc/Beauty_sentence-t5-base/K=256_D=3"
+}
