@@ -43,11 +43,18 @@ if __name__ == '__main__':
     parser.add_argument('--user_prefix', type=str, default='<u_{}>', )
 
     # metrics
+    parser.add_argument(
+        '--sid_prefix_len', type=int, default=None,
+        help='Number of leading SID tokens defining a hit group (1..D; default: D)')
     parser.add_argument('--metrics', type=str, default="['recall@5', 'recall@10', 'ndcg@5', 'ndcg@10']")
 
     parser.add_argument('--results_file', type=str, default=None, help='Save JSON experiment results')
     args = parser.parse_args()
     parse_metrics(args.metrics)
+    if args.sid_prefix_len is None:
+        args.sid_prefix_len = args.D
+    if not 1 <= args.sid_prefix_len <= args.D:
+        parser.error('--sid_prefix_len must be between 1 and D')
     if args.num_beams < 1:
         parser.error('--num_beams must be positive')
 
@@ -79,7 +86,9 @@ if __name__ == '__main__':
 
     all_items = test_dataset.get_all_items()
 
-    evaluator = CollisionEvaluator(test_dataset.indices, args.D, args.token_type, args.metrics)
+    evaluator = CollisionEvaluator(
+        test_dataset.indices, args.D, args.token_type, args.metrics,
+        sid_prefix_len=args.sid_prefix_len)
     if not len(test_dataset):
         raise ValueError('Test dataset is empty')
     if max(int(m.split('@')[1]) for m in evaluator.metrics) > args.num_beams:

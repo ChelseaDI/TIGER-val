@@ -98,13 +98,19 @@ python evaluation.py --dataset Games --token_type sid --K 256 --D 3 --device cud
 
 ### 指标含义
 
+评估参数 `--sid_prefix_len` 指定 SID 命中组使用的前缀 token 数，范围为 `1..D`，
+默认等于 `D`，保留原有行为。例如模型仍使用 `--D 3 --token_type sid_nc`，
+增加 `--sid_prefix_len 2` 即按前两位相同分组，无需重新训练。该参数统一影响
+SID 指标、SID 类去重、冲突统计和样本分层；严格 item 指标仍比较完整编码。
+参数记录在结果 JSON 的 `settings` 中。
+
 结果 JSON 包含参数、检查点路径、目录级冲突统计，以及 `all`、`collision`、
-`singleton` 三个测试样本分层。分层依据 ground truth 的原始 SID 类大小，
+`singleton` 三个测试样本分层。分层依据 ground truth 的 SID 前缀组大小，
 每层独立按用户样本数归一化，空层指标为空。`collision_rate = 1 - 类数/item 数`，
 同时报告发生冲突的类数、这些类覆盖的 item 数和最大类大小。
 
 - `item/hit@K`、`item/ndcg@K`：消歧模型的严格 item 指标。
-- `sid_at_item_rank/*`：仍用原始 item 候选排名，只放宽为 D 位 SID 相等。
+- `sid_at_item_rank/*`：仍用原始 item 候选排名，只放宽为前 `sid_prefix_len` 位 SID 相等。
   同类多个候选只计首次命中，NDCG 不会重复累加。适合与同模型 item 指标对照。
 - `sid_hit_item_miss/hit@K`：同一份排名中 SID 命中而 item 未命中的样本比例，
   是二者 Hit@K 之差，**不是**以 SID 命中样本数为分母的条件错误率。

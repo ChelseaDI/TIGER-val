@@ -8,12 +8,15 @@ def normalize_sid(text):
     return ''.join(text.split())
 
 
-def build_catalog(indices, depth, token_type):
-    """Validate mapping; the first D tokens define the shared SID class."""
+def build_catalog(indices, depth, token_type, sid_prefix_len=None):
+    """Validate full codes and group items by a configurable token prefix."""
     unique = token_type.endswith('_nc') or token_type == 'cid'
     expected = depth + int(token_type.endswith('_nc'))
     if not indices or depth < 1:
         raise ValueError('A nonempty mapping and positive D are required')
+    sid_prefix_len = depth if sid_prefix_len is None else sid_prefix_len
+    if isinstance(sid_prefix_len, bool) or not isinstance(sid_prefix_len, int) or not 1 <= sid_prefix_len <= depth:
+        raise ValueError('sid_prefix_len must be an integer between 1 and D')
     catalog = {}
     counts = Counter()
     for item, tokens in indices.items():
@@ -21,7 +24,7 @@ def build_catalog(indices, depth, token_type):
             raise ValueError('Invalid SID length for item {}: expected {}'.format(item, expected))
         if not all(isinstance(t, str) and t and normalize_sid(t) == t for t in tokens):
             raise ValueError('SID tokens must be nonempty strings without whitespace')
-        code, group = ''.join(tokens), ''.join(tokens[:depth])
+        code, group = ''.join(tokens), ''.join(tokens[:sid_prefix_len])
         if unique and code in catalog:
             raise ValueError('The no-conflict mapping contains duplicate item codes')
         catalog[code] = group
@@ -68,8 +71,9 @@ def metric_values(rank, names):
 
 
 class CollisionEvaluator:
-    def __init__(self, indices, depth, token_type, metrics):
-        self.catalog, self.counts, self.stats = build_catalog(indices, depth, token_type)
+    def __init__(self, indices, depth, token_type, metrics, sid_prefix_len=None):
+        self.catalog, self.counts, self.stats = build_catalog(
+            indices, depth, token_type, sid_prefix_len=sid_prefix_len)
         self.item_level = token_type.endswith('_nc') or token_type == 'cid'
         self.metrics = parse_metrics(metrics)
         self.totals = {}

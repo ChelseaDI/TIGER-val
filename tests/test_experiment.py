@@ -42,6 +42,33 @@ class ExperimentTests(unittest.TestCase):
         self.assertEqual(m['sid_at_item_rank/hit@2'], 0)
         self.assertEqual(m['sid_unique/hit@2'], 1)
 
+    def test_configurable_prefix(self):
+        indices = dict(UNIQUE, D=['<a_1>', '<b_2>', '<c_9>', '<d_0>'])
+        a, b, c, d = (''.join(indices[k]) for k in ('A', 'B', 'C', 'D'))
+        default = CollisionEvaluator(indices, 3, 'sid_nc', ['hit@1', 'hit@2'])
+        shorter = CollisionEvaluator(indices, 3, 'sid_nc', ['hit@1', 'hit@2'], sid_prefix_len=2)
+        for ev in (default, shorter):
+            ev.add([d, a, c], b)
+            ev.add([d, a, c], c)
+        old, new = (ev.result() for ev in (default, shorter))
+        om, nm = (r['strata']['all']['metrics'] for r in (old, new))
+        self.assertEqual(om['sid_at_item_rank/hit@1'], 0)
+        self.assertEqual(nm['sid_at_item_rank/hit@1'], .5)
+        self.assertEqual(om['sid_unique/hit@2'], .5)
+        self.assertEqual(nm['sid_unique/hit@2'], 1)
+        self.assertEqual(nm['sid_hit_item_miss/hit@1'], .5)
+        self.assertEqual(om['item/hit@2'], nm['item/hit@2'])
+        self.assertEqual(old['catalog']['sid_classes'], 3)
+        self.assertEqual(new['catalog']['sid_classes'], 2)
+        self.assertEqual(new['catalog']['items_in_collision_classes'], 3)
+
+    def test_prefix_validation(self):
+        for length in (0, -1, 4, 1.5, True):
+            with self.subTest(length=length), self.assertRaises(ValueError):
+                build_catalog(UNIQUE, 3, 'sid_nc', sid_prefix_len=length)
+        self.assertEqual(build_catalog(UNIQUE, 3, 'sid_nc'),
+                         build_catalog(UNIQUE, 3, 'sid_nc', sid_prefix_len=3))
+
     def test_validation(self):
         with self.assertRaises(ValueError):
             build_catalog(RAW, 3, 'sid_nc')
